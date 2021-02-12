@@ -11,7 +11,7 @@
 #include "common/sockets.h"
 
 #define PORT "6969"
-#define HOST "localhost"
+#define HOST "servers"
 
 void print_address(struct addrinfo *address_info) {
 	char *type;

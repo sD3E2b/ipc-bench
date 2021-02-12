@@ -11,7 +11,7 @@
 #include "common/sockets.h"
 
 #define PORT "6969"
-#define HOST "localhost"
+#define HOST "servers"
 
 int get_address(struct addrinfo *server_info) {
 	struct addrinfo *iterator;
