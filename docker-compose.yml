@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  clients:
+    image: ipc:clients
+    hostname: clients
+    command: tail -f /dev/null
+    working_dir: /
+    volumes:
+      - shared:/tmp/
+    networks:
+      - internal
+
+  servers:
+    image: ipc:servers
+    hostname: servers
+    command: tail -f /dev/null
+    working_dir: /
+    volumes:
+      - shared:/tmp/
+    networks:
+      - internal
+
+volumes:
+  shared:
+
+networks:
+  internal:
