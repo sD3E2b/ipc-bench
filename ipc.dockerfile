@@ -7,6 +7,7 @@ RUN sed -i 's/sys\/signal.h/signal.h/g' /project/source/signal/server.c
 RUN sed -i 's/sys\/signal.h/signal.h/g' /project/source/signal/client.c
 RUN cmake ../source -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 RUN make
+RUN touch /tmp/mq
 
 FROM build-base as debug
 RUN apk add gdb
@@ -18,9 +19,15 @@ FROM alpine:3.13 as ipc-clients
 RUN apk update && apk add libzmq
 COPY --from=build-base /project/build/zeromq/zeromq-client /
 COPY --from=build-base /project/build/tcp/tcp-client /
+COPY --from=build-base /project/build/shm/shm-client /
+# COPY --from=build-base /project/build/shm-sync/shm-sync-client /
+COPY --from=build-base /project/build/mq/mq-client /
 
 FROM alpine:3.13 as ipc-servers
 RUN apk update && apk add libzmq
 COPY --from=build-base /project/build/zeromq/zeromq-server /
 COPY --from=build-base /project/build/tcp/tcp-server /
+COPY --from=build-base /project/build/shm/shm-server /
+# COPY --from=build-base /project/build/shm-sync/shm-sync-server /
+COPY --from=build-base /project/build/mq/mq-server /
 

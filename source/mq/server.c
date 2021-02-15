@@ -83,7 +83,7 @@ int create_mq() {
 	int mq;
 
 	// Generate a key for the message-queue
-	key_t key = generate_key("mq");
+	key_t key = generate_key("/tmp/mq");
 
 	// msgget is the call to create or retrieve a message queue.
 	// It is identified by its unique key, which we generated above
@@ -97,7 +97,7 @@ int create_mq() {
 	}
 
 	// Tell the client it can now get the queue
-	server_once(NOTIFY);
+	// server_once(NOTIFY);
 
 	return mq;
 }
