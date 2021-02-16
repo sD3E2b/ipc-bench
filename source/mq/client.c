@@ -6,11 +6,27 @@
 #include "mq/mq-common.h"
 
 void communicate(int mq, struct Arguments* args) {
+	struct Benchmarks bench;
 	struct Message* message;
+	int index;
 
+	setup_benchmarks(&bench);
 	message = create_message(args);
 
-	for (; args->count > 0; --args->count) {
+	for (index = 0; index < args->count; ++index) {
+		bench.single_start = now();
+
+		message->type = CLIENT_MESSAGE;
+		memset(message->buffer, '1', args->size);
+
+		// Same parameters as msgrcv, but no message-type
+		// (because it is determined by the message's member)
+		// Note that msgsend only returns 0 on success, not the
+		// number of bytes, so we don't have to check for < args->size
+		if (msgsnd(mq, message, args->size, 0) == -1) {
+			throw("Error sending on client-side");
+		}
+
 		// Fetch a message from the queue.
 		// Arguments:
 		// 1. The message-queue identifier.
@@ -33,18 +49,10 @@ void communicate(int mq, struct Arguments* args) {
 			throw("Error receiving on client-side");
 		}
 
-		message->type = CLIENT_MESSAGE;
-		memset(message->buffer, '1', args->size);
-
-		// Same parameters as msgrcv, but no message-type
-		// (because it is determined by the message's member)
-		// Note that msgsend only returns 0 on success, not the
-		// number of bytes, so we don't have to check for < args->size
-		if (msgsnd(mq, message, args->size, 0) == -1) {
-			throw("Error sending on client-side");
-		}
+		benchmark(&bench);
 	}
 
+	evaluate(&bench, args);
 	free(message);
 }
 

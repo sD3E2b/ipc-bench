@@ -22,29 +22,13 @@ void cleanup(int mq, struct Message* message) {
 
 
 void communicate(int mq, struct Arguments* args) {
-	struct Benchmarks bench;
 	struct Message* message;
-	int index;
 
 	message = create_message(args);
-	setup_benchmarks(&bench);
 
-	for (index = 0; index < args->count; ++index) {
-		bench.single_start = now();
+	for (; args->count > 0; --args->count) {
 
-		// Messages in message-queues are associated with
-		// a "type", which is simply an identifier for the message
-		// kind. This way, we can put different kinds of messages on
-		// the queue, but fetch only the ones we want, by passing
-		// the type of the message we want to msgrcv().
-		message->type = SERVER_MESSAGE;
-		memset(message->buffer, '2', args->size);
 
-		// Same parameters as msgrcv, but no message-type
-		// (because it is determined by the message's member)
-		if (msgsnd(mq, message, args->size, IPC_NOWAIT) == -1) {
-			throw("Error sending on server-side");
-		}
 
 		// Fetch a message from the queue.
 		// Arguments:
@@ -69,12 +53,23 @@ void communicate(int mq, struct Arguments* args) {
 			throw("Error receiving on server-side");
 		}
 
-		benchmark(&bench);
+		// Messages in message-queues are associated with
+		// a "type", which is simply an identifier for the message
+		// kind. This way, we can put different kinds of messages on
+		// the queue, but fetch only the ones we want, by passing
+		// the type of the message we want to msgrcv().
+		message->type = SERVER_MESSAGE;
+		memset(message->buffer, '2', args->size);
+
+		// Same parameters as msgrcv, but no message-type
+		// (because it is determined by the message's member)
+		if (msgsnd(mq, message, args->size, 0) == -1) {
+			throw("Error sending on server-side");
+		}
 	}
 
 	// Since the buffer size must be fixed
 	// args->size = MESSAGE_SIZE;
-	evaluate(&bench, args);
 
 	cleanup(mq, message);
 }
