@@ -7,48 +7,43 @@
 
 #include "common/common.h"
 
-#define FIFO_PATH "/tmp/ipc_bench_fifo"
+#define FIFO_CLIENT_PATH "/tmp/ipc_bench_fifo_client"
+#define FIFO_SERVER_PATH "/tmp/ipc_bench_fifo_server"
 
 void cleanup(FILE* stream, void* buffer) {
 	free(buffer);
 	fclose(stream);
-	if (remove(FIFO_PATH) == -1) {
+	if (remove(FIFO_SERVER_PATH) == -1) {
 		throw("Error removing FIFO");
 	}
 }
 
-void communicate(FILE* stream,
-								 struct Arguments* args,
-								 struct sigaction* signal_action) {
-	struct Benchmarks bench;
-	int message;
+void communicate(FILE* server_stream,
+                                 FILE* client_stream,
+								 struct Arguments* args) {
 	void* buffer;
 
 	buffer = malloc(args->size);
-	setup_benchmarks(&bench);
 
-	wait_for_signal(signal_action);
+	for (; args->count > 0; --args->count) {
 
-	for (message = 0; message < args->count; ++message) {
-		bench.single_start = now();
+        size_t elements = 0;
 
-		if (fwrite(buffer, args->size, 1, stream) == 0) {
-			throw("Error writing buffer");
+        while (elements == 0) {
+            elements = fread(buffer, args->size, 1, server_stream);
+        }
+
+		if (fwrite(buffer, args->size, 1, client_stream) == 0) {
+			throw("Error writing client stream");
 		}
 		// Send off immediately (for small buffers)
-		fflush(stream);
-
-		notify_client();
-		wait_for_signal(signal_action);
-
-		benchmark(&bench);
+		fflush(client_stream);
 	}
 
-	evaluate(&bench, args);
-	cleanup(stream, buffer);
+	cleanup(server_stream, buffer);
 }
 
-FILE* open_fifo() {
+FILE* open_server_fifo() {
 	FILE* stream;
 
 	// Just in case it already exists
@@ -60,38 +55,50 @@ FILE* open_fifo() {
 	// both server and client can write using standard
 	// c i/o functions. 0666 specifies read+write
 	// access permissions for the user, group and world
-	if (mkfifo(FIFO_PATH, 0666) > 0) {
+	if (mkfifo(FIFO_SERVER_PATH, 0666) > 0) {
 		throw("Error creating FIFO");
 	}
-
-	// Tell the client the fifo now exists and
-	// can be opened from the read end
-	notify_client();
 
 	// Because a fifo is really just a file, we can
 	// open a normal FILE* stream to it (in write mode)
 	// Note that this call will block until the read-end
 	// is opened by the client
-	if ((stream = fopen(FIFO_PATH, "w")) == NULL) {
+	if ((stream = fopen(FIFO_SERVER_PATH, "r")) == NULL) {
 		throw("Error opening descriptor to FIFO on server side");
 	}
 
 	return stream;
 }
 
+FILE* open_client_fifo() {
+	FILE* stream = NULL;
+
+	// Just in case it already exists
+	//(void)remove(FIFO_PATH);
+
+	// Because a fifo is really just a file, we can
+	// open a normal FILE* stream to it (in write mode)
+	// Note that this call will block until the read-end
+	// is opened by the client
+    while (stream == NULL) {
+        stream = fopen(FIFO_CLIENT_PATH, "w");
+    }
+
+	return stream;
+}
+
 int main(int argc, char* argv[]) {
 	// The file pointer we will associate with the FIFO
-	FILE* stream;
-	// For server/client signals
-	struct sigaction signal_action;
+	FILE* server_stream;
+	FILE* client_stream;
 
 	struct Arguments args;
 	parse_arguments(&args, argc, argv);
 
-	setup_server_signals(&signal_action);
-	stream = open_fifo();
+	server_stream = open_server_fifo();
+	client_stream = open_client_fifo();
 
-	communicate(stream, &args, &signal_action);
+	communicate(server_stream, client_stream, &args);
 
 	return EXIT_SUCCESS;
 }
