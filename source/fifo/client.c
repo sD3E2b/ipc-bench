@@ -36,10 +36,10 @@ void communicate(FILE *server_stream,
 
         fflush(server_stream);
 
-        size_t elements = 0;
-        while (elements == 0) {
-            elements = fread(buffer, args->size, 1, client_stream);
+        if (fread(buffer, args->size, 1, client_stream) == 0 ) {
+			throw("Error reading client stream");
         }
+
 
 		benchmark(&bench);
 	}

@@ -27,10 +27,9 @@ void communicate(FILE* server_stream,
 
 	for (; args->count > 0; --args->count) {
 
-        size_t elements = 0;
 
-        while (elements == 0) {
-            elements = fread(buffer, args->size, 1, server_stream);
+        if (fread(buffer, args->size, 1, server_stream) == 0) {
+			throw("Error writing server stream");
         }
 
 		if (fwrite(buffer, args->size, 1, client_stream) == 0) {
@@ -80,9 +79,9 @@ FILE* open_client_fifo() {
 	// open a normal FILE* stream to it (in write mode)
 	// Note that this call will block until the read-end
 	// is opened by the client
-    while (stream == NULL) {
-        stream = fopen(FIFO_CLIENT_PATH, "w");
-    }
+	if ((stream = fopen(FIFO_CLIENT_PATH, "w")) == NULL) {
+		throw("Error opening client stream server-side");
+	}
 
 	return stream;
 }
