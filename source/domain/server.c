@@ -19,30 +19,24 @@ void cleanup(int connection, void* buffer) {
 }
 
 void communicate(int connection, struct Arguments* args, int busy_waiting) {
-	struct Benchmarks bench;
-	int message;
 	void* buffer;
 
 	buffer = malloc(args->size);
-	setup_benchmarks(&bench);
 
-	for (message = 0; message < args->count; ++message) {
-		bench.single_start = now();
+	for (; args->count > 0; --args->count) {
 
-		if (send(connection, buffer, args->size, 0) < args->size) {
-			throw("Error sending on server-side");
-		}
-
-		memset(buffer, '*', args->size);
 
 		if (receive(connection, buffer, args->size, busy_waiting) == -1) {
 			throw("Error receiving on server-side");
 		}
 
-		benchmark(&bench);
+		memset(buffer, '*', args->size);
+
+		if (send(connection, buffer, args->size, 0) < args->size) {
+			throw("Error sending on server-side");
+		}
 	}
 
-	evaluate(&bench, args);
 	cleanup(connection, buffer);
 }
 
@@ -112,9 +106,6 @@ int create_socket() {
 
 	setup_socket(socket_descriptor);
 
-	// Notify the client that it can connect to the socket now
-	server_once(NOTIFY);
-
 	return socket_descriptor;
 }
 
@@ -157,7 +148,7 @@ int main(int argc, char* argv[]) {
 	// File descriptor for the server socket
 	int socket_descriptor;
 	// File descriptor for the socket over which
-	// the communciation will happen with the client
+	// the communication will happen with the client
 	int connection;
 
 	// Flag to determine if we want busy-waiting

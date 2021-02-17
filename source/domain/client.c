@@ -16,21 +16,29 @@ void cleanup(int connection, void* buffer) {
 }
 
 void communicate(int connection, struct Arguments* args, int busy_waiting) {
+	int message;
+	struct Benchmarks bench;
 	void* buffer = malloc(args->size);
+	setup_benchmarks(&bench);
 
-	for (; args->count > 0; --args->count) {
-		if (receive(connection, buffer, args->size, busy_waiting) == -1) {
-			throw("Error receiving on client-side");
-		}
-
+	for (message = 0; message < args->count; ++message) {
+		bench.single_start = now();
+        //
 		// Dummy operation
 		memset(buffer, '*', args->size);
 
 		if (send(connection, buffer, args->size, 0) == -1) {
 			throw("Error sending on client-side");
 		}
+
+		if (receive(connection, buffer, args->size, busy_waiting) == -1) {
+			throw("Error receiving on client-side");
+		}
+
+		benchmark(&bench);
 	}
 
+	evaluate(&bench, args);
 	cleanup(connection, buffer);
 }
 
@@ -88,9 +96,6 @@ void setup_socket(int connection, int busy_waiting) {
 int create_connection(int busy_waiting) {
 	// The connection socket (file descriptor) that we will return
 	int connection;
-
-	// Wait until the server is listening on the socket
-	client_once(WAIT);
 
 	// Get a new socket from the OS
 	// Arguments:

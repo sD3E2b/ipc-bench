@@ -24,6 +24,7 @@ COPY --from=build-base /project/build/shm/shm-client /
 COPY --from=build-base /project/build/mq/mq-client /
 # COPY --from=build-base /project/build/pipe/pipe-client /  # client is fork of server
 COPY --from=build-base /project/build/fifo/fifo-client /
+COPY --from=build-base /project/build/domain/domain-client /
 
 FROM alpine:3.13 as ipc-servers
 RUN apk update && apk add libzmq
@@ -34,4 +35,5 @@ COPY --from=build-base /project/build/shm/shm-server /
 COPY --from=build-base /project/build/mq/mq-server /
 # COPY --from=build-base /project/build/pipe/pipe-server /
 COPY --from=build-base /project/build/fifo/fifo-server /
+COPY --from=build-base /project/build/domain/domain-server /
 
